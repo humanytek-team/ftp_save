@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <record id="ftp_server_view_form" model="ir.ui.view">
+    <field name="name">ftp_server.view.form</field>
+    <field name="model">ftp_server</field>
+    <field name="arch" type="xml">
+      <form>
+        <header>
+          <button name="test_connection" string="Test" type="object" class="oe_highlight"/>
+        </header>
+        <sheet>
+          <group>
+            <field name="host"/>
+            <field name="port"/>
+            <field name="user"/>
+            <field name="password"/>
+            <field name="tls"/>
+            <field name="home_path"/>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <record id="ftp_server_action" model="ir.actions.act_window">
+    <field name="name">FTP Servers</field>
+    <field name="res_model">ftp_server</field>
+    <field name="view_mode">tree,form</field>
+  </record>
+
+  <menuitem id="ftp_server_menu" name="FTP Servers" parent="base.menu_custom" action="ftp_server_action"/>
+</odoo>
