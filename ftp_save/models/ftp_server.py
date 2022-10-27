@@ -1,6 +1,6 @@
 from ftplib import FTP
 from io import BytesIO
-from typing import Union
+from typing import Iterable, Union
 
 import pysftp
 from odoo import _, api, fields, models
@@ -49,6 +49,50 @@ class FTPServer(models.Model):
             self._upload_sftp(connector, file_path, file_content)
         else:
             raise TypeError(f"Unknown connector type: {type(connector)}")
+
+    def list(self, dir_path: str) -> Iterable[str]:
+        ftp_connector = self.get_ftp_connector()
+        return self._list(ftp_connector, dir_path)
+
+    def _list(self, connector: Union[FTP, pysftp.Connection], dir_path: str) -> Iterable[str]:
+        if isinstance(connector, FTP):
+            return self._list_ftp(connector, dir_path)
+        elif isinstance(connector, pysftp.Connection):
+            return self._list_sftp(connector, dir_path)
+        else:
+            raise TypeError(f"Unknown connector type: {type(connector)}")
+
+    def _list_ftp(self, connector: FTP, dir_path: str) -> Iterable[str]:
+        dir_path = self._full_path(dir_path)
+        return connector.nlst(dir_path)
+
+    def _list_sftp(self, connector: pysftp.Connection, dir_path: str) -> Iterable[str]:
+        dir_path = self._full_path(dir_path)
+        return connector.listdir(dir_path)
+
+    def download(self, file_path: str) -> bytes:
+        ftp_connector = self.get_ftp_connector()
+        return self._download(ftp_connector, file_path)
+
+    def _download(self, connector: Union[FTP, pysftp.Connection], file_path: str) -> bytes:
+        if isinstance(connector, FTP):
+            return self._download_ftp(connector, file_path)
+        elif isinstance(connector, pysftp.Connection):
+            return self._download_sftp(connector, file_path)
+        else:
+            raise TypeError(f"Unknown connector type: {type(connector)}")
+
+    def _download_ftp(self, connector: FTP, file_path: str) -> bytes:
+        file_path = self._full_path(file_path)
+        file_content = BytesIO()
+        connector.retrbinary(f"RETR {file_path}", file_content.write)
+        return file_content.getvalue()
+
+    def _download_sftp(self, connector: pysftp.Connection, file_path: str) -> bytes:
+        file_path = self._full_path(file_path)
+        file_content = BytesIO()
+        connector.getfo(file_path, file_content)
+        return file_content.getvalue()
 
     def get_ftp_connector(self) -> Union[FTP, pysftp.Connection]:
         host = self.host
