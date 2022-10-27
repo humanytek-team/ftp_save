@@ -50,6 +50,30 @@ class FTPServer(models.Model):
         else:
             raise TypeError(f"Unknown connector type: {type(connector)}")
 
+    def download(self, file_path: str) -> bytes:
+        ftp_connector = self.get_ftp_connector()
+        return self._download(ftp_connector, file_path)
+
+    def _download(self, connector: Union[FTP, pysftp.Connection], file_path: str) -> bytes:
+        if isinstance(connector, FTP):
+            return self._download_ftp(connector, file_path)
+        elif isinstance(connector, pysftp.Connection):
+            return self._download_sftp(connector, file_path)
+        else:
+            raise TypeError(f"Unknown connector type: {type(connector)}")
+
+    def _download_ftp(self, connector: FTP, file_path: str) -> bytes:
+        file_path = self._full_path(file_path)
+        file_content = BytesIO()
+        connector.retrbinary(f"RETR {file_path}", file_content.write)
+        return file_content.getvalue()
+
+    def _download_sftp(self, connector: pysftp.Connection, file_path: str) -> bytes:
+        file_path = self._full_path(file_path)
+        file_content = BytesIO()
+        connector.getfo(file_path, file_content)
+        return file_content.getvalue()
+
     def get_ftp_connector(self) -> Union[FTP, pysftp.Connection]:
         host = self.host
         port = self.port
