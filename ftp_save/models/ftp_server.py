@@ -40,6 +40,24 @@ class FTPServer(models.Model):
     ) -> None:
         connector.putfo(BytesIO(file_content), self._full_path(file_path))
 
+    def delete(self, file_path: str) -> None:
+        ftp_connector = self.get_ftp_connector()
+        self._delete(ftp_connector, file_path)
+
+    def _delete(self, connector: Union[FTP, pysftp.Connection], file_path: str) -> None:
+        if isinstance(connector, FTP):
+            self._delete_ftp(connector, file_path)
+        elif isinstance(connector, pysftp.Connection):
+            self._delete_sftp(connector, file_path)
+        else:
+            raise TypeError(f"Unknown connector type: {type(connector)}")
+
+    def _delete_ftp(self, connector: FTP, file_path: str) -> None:
+        connector.delete(self._full_path(file_path))
+
+    def _delete_sftp(self, connector: pysftp.Connection, file_path: str) -> None:
+        connector.remove(self._full_path(file_path))
+
     def _upload(
         self, connector: Union[FTP, pysftp.Connection], file_path: str, file_content: bytes
     ) -> None:
