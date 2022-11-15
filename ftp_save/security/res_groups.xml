@@ -1,0 +1,7 @@
+<odoo>
+  <record id="group_ftp_server_admin" model="res.groups">
+    <field name="name">FTP Server Admin</field>
+    <field name="implied_ids" eval="[(4, ref('base.group_erp_manager'))]"/>
+    <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
+  </record>
+</odoo>
