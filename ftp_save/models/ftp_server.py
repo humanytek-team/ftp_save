@@ -1,9 +1,12 @@
 from ftplib import FTP
 from io import BytesIO
-from typing import Iterable, Union
+from typing import Any, Dict, Iterable, Union
 
 import pysftp
 from odoo import _, api, fields, models
+from odoo.exceptions import UserError
+
+OdooAction = Dict[str, Any]
 
 
 class FTPServer(models.Model):
@@ -23,6 +26,7 @@ class FTPServer(models.Model):
         groups="ftp_save.group_ftp_server_admin",
     )
     tls = fields.Boolean(
+        string="TLS",
         default=True,
     )
     home_path = fields.Char()
@@ -115,6 +119,12 @@ class FTPServer(models.Model):
         return file_content.getvalue()
 
     def get_ftp_connector(self) -> Union[FTP, pysftp.Connection]:
+        try:
+            return self.sudo()._get_ftp_connector()
+        except Exception as e:
+            raise UserError(_("Connection failed: %s") % e)
+
+    def _get_ftp_connector(self) -> Union[FTP, pysftp.Connection]:
         host = self.host
         port = self.port
         username = self.user
@@ -131,9 +141,16 @@ class FTPServer(models.Model):
         ftp.login(username, password)
         return ftp
 
-    def test_connection(self) -> bool:
-        try:
-            self.get_ftp_connector()
-            return True
-        except Exception as e:
-            raise e
+    def test_connection(self) -> OdooAction:
+        self.get_ftp_connector()
+        title = _("FTP Connection Test Succeeded!")
+        message = _("Everything seems properly set up!")
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": title,
+                "message": message,
+                "sticky": False,
+            },
+        }
