@@ -19,7 +19,9 @@ class FTPServer(models.Model):
         required=True,
     )
     user = fields.Char()
-    password = fields.Char()
+    password = fields.Char(
+        groups="ftp_save.group_ftp_server_admin",
+    )
     tls = fields.Boolean(
         default=True,
     )

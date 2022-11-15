@@ -6,6 +6,7 @@
     "depends": [],
     "data": [
         # security
+        "security/res_groups.xml",
         "security/ir.model.access.csv",
         # data
         # reports

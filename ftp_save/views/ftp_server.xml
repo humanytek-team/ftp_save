@@ -13,7 +13,7 @@
             <field name="host"/>
             <field name="port"/>
             <field name="user"/>
-            <field name="password"/>
+            <field name="password" password="True"/>
             <field name="tls"/>
             <field name="home_path"/>
           </group>
