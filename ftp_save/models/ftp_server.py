@@ -8,6 +8,7 @@ from odoo import _, api, fields, models
 
 class FTPServer(models.Model):
     _name = "ftp_server"
+    _description = "FTP Server"
     _rec_name = "host"
 
     host = fields.Char(
