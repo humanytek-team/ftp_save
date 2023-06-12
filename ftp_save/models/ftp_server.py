@@ -75,7 +75,7 @@ class FTPServer(models.Model):
         else:
             raise TypeError(f"Unknown connector type: {type(connector)}")
 
-    def list(self, dir_path: str) -> Iterable[str]:
+    def list(self, dir_path: str = "") -> Iterable[str]:
         ftp_connector = self.get_ftp_connector()
         return self._list(ftp_connector, dir_path)
 
