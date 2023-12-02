@@ -1,9 +1,15 @@
+import logging
 from ftplib import FTP
 from io import BytesIO
 from typing import Union
 
-import pysftp
 from odoo import _, api, fields, models
+
+_logger = logging.getLogger(__name__)
+try:
+    import pysftp
+except ImportError:
+    _logger.error("pysftp not installed, sftp will not be available")
 
 
 class FTPServer(models.Model):
@@ -36,7 +42,9 @@ class FTPServer(models.Model):
         self._upload(ftp_connector, file_path, file_content)
 
     def _upload_ftp(self, connector: FTP, file_path: str, file_content: bytes) -> None:
-        connector.storbinary(f"STOR {self._full_path(file_path)}", BytesIO(file_content))
+        connector.storbinary(
+            f"STOR {self._full_path(file_path)}", BytesIO(file_content)
+        )
 
     def _upload_sftp(
         self, connector: pysftp.Connection, file_path: str, file_content: bytes
@@ -44,7 +52,10 @@ class FTPServer(models.Model):
         connector.putfo(BytesIO(file_content), self._full_path(file_path))
 
     def _upload(
-        self, connector: Union[FTP, pysftp.Connection], file_path: str, file_content: bytes
+        self,
+        connector: Union[FTP, pysftp.Connection],
+        file_path: str,
+        file_content: bytes,
     ) -> None:
         if isinstance(connector, FTP):
             self._upload_ftp(connector, file_path, file_content)
@@ -63,7 +74,11 @@ class FTPServer(models.Model):
             cnopts = pysftp.CnOpts()
             cnopts.hostkeys = None
             return pysftp.Connection(
-                host=host, username=username, password=password, cnopts=cnopts, port=port
+                host=host,
+                username=username,
+                password=password,
+                cnopts=cnopts,
+                port=port,
             )
         ftp = FTP()
         ftp.connect(host, port)
