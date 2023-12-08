@@ -5,9 +5,6 @@
     <field name="model">ftp_server</field>
     <field name="arch" type="xml">
       <form>
-        <header>
-          <button name="test_connection" string="Test" type="object" class="oe_highlight"/>
-        </header>
         <sheet>
           <group>
             <field name="host"/>
@@ -16,6 +13,7 @@
             <field name="password" password="True"/>
             <field name="tls"/>
             <field name="home_path"/>
+            <button name="test_connection" type="object" string="Test Connection" icon="fa-television"/>
           </group>
         </sheet>
       </form>

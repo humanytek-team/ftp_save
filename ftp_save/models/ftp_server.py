@@ -1,9 +1,12 @@
 import logging
 from ftplib import FTP
 from io import BytesIO
-from typing import Union
+from typing import Any, Dict, Iterable, Union
 
 from odoo import _, api, fields, models
+from odoo.exceptions import UserError
+
+OdooAction = Dict[str, Any]
 
 _logger = logging.getLogger(__name__)
 try:
@@ -30,6 +33,7 @@ class FTPServer(models.Model):
         groups="ftp_save.group_ftp_server_admin",
     )
     tls = fields.Boolean(
+        string="TLS",
         default=True,
     )
     home_path = fields.Char()
@@ -51,6 +55,24 @@ class FTPServer(models.Model):
     ) -> None:
         connector.putfo(BytesIO(file_content), self._full_path(file_path))
 
+    def delete(self, file_path: str) -> None:
+        ftp_connector = self.get_ftp_connector()
+        self._delete(ftp_connector, file_path)
+
+    def _delete(self, connector: Union[FTP, pysftp.Connection], file_path: str) -> None:
+        if isinstance(connector, FTP):
+            self._delete_ftp(connector, file_path)
+        elif isinstance(connector, pysftp.Connection):
+            self._delete_sftp(connector, file_path)
+        else:
+            raise TypeError(f"Unknown connector type: {type(connector)}")
+
+    def _delete_ftp(self, connector: FTP, file_path: str) -> None:
+        connector.delete(self._full_path(file_path))
+
+    def _delete_sftp(self, connector: pysftp.Connection, file_path: str) -> None:
+        connector.remove(self._full_path(file_path))
+
     def _upload(
         self,
         connector: Union[FTP, pysftp.Connection],
@@ -64,7 +86,57 @@ class FTPServer(models.Model):
         else:
             raise TypeError(f"Unknown connector type: {type(connector)}")
 
+    def list(self, dir_path: str = "") -> Iterable[str]:
+        ftp_connector = self.get_ftp_connector()
+        return self._list(ftp_connector, dir_path)
+
+    def _list(self, connector: Union[FTP, pysftp.Connection], dir_path: str) -> Iterable[str]:
+        if isinstance(connector, FTP):
+            return self._list_ftp(connector, dir_path)
+        elif isinstance(connector, pysftp.Connection):
+            return self._list_sftp(connector, dir_path)
+        else:
+            raise TypeError(f"Unknown connector type: {type(connector)}")
+
+    def _list_ftp(self, connector: FTP, dir_path: str) -> Iterable[str]:
+        dir_path = self._full_path(dir_path)
+        return connector.nlst(dir_path)
+
+    def _list_sftp(self, connector: pysftp.Connection, dir_path: str) -> Iterable[str]:
+        dir_path = self._full_path(dir_path)
+        return connector.listdir(dir_path)
+
+    def download(self, file_path: str) -> bytes:
+        ftp_connector = self.get_ftp_connector()
+        return self._download(ftp_connector, file_path)
+
+    def _download(self, connector: Union[FTP, pysftp.Connection], file_path: str) -> bytes:
+        if isinstance(connector, FTP):
+            return self._download_ftp(connector, file_path)
+        elif isinstance(connector, pysftp.Connection):
+            return self._download_sftp(connector, file_path)
+        else:
+            raise TypeError(f"Unknown connector type: {type(connector)}")
+
+    def _download_ftp(self, connector: FTP, file_path: str) -> bytes:
+        file_path = self._full_path(file_path)
+        file_content = BytesIO()
+        connector.retrbinary(f"RETR {file_path}", file_content.write)
+        return file_content.getvalue()
+
+    def _download_sftp(self, connector: pysftp.Connection, file_path: str) -> bytes:
+        file_path = self._full_path(file_path)
+        file_content = BytesIO()
+        connector.getfo(file_path, file_content)
+        return file_content.getvalue()
+
     def get_ftp_connector(self) -> Union[FTP, pysftp.Connection]:
+        try:
+            return self.sudo()._get_ftp_connector()
+        except Exception as e:
+            raise UserError(_("Connection failed: %s") % e)
+
+    def _get_ftp_connector(self) -> Union[FTP, pysftp.Connection]:
         host = self.host
         port = self.port
         username = self.user
@@ -85,9 +157,16 @@ class FTPServer(models.Model):
         ftp.login(username, password)
         return ftp
 
-    def test_connection(self) -> bool:
-        try:
-            self.get_ftp_connector()
-            return True
-        except Exception as e:
-            raise e
+    def test_connection(self) -> OdooAction:
+        self.get_ftp_connector()
+        title = _("FTP Connection Test Succeeded!")
+        message = _("Everything seems properly set up!")
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": title,
+                "message": message,
+                "sticky": False,
+            },
+        }
